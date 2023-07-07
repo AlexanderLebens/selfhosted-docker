@@ -1,0 +1,106 @@
+services:
+    mariadb:
+        command:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_unicode_ci
+            - --max-connections=1000
+        container_name: vikunja_mariadb
+        env_file:
+            - .db.env
+        image: mariadb:10
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik:
+                ipv4_address: 172.27.1.75
+        restart: always
+        volumes:
+            - db:/data/db
+            - dbvar:/var/lib/mysql
+
+    api:
+        container_name: vikunja_api
+        depends_on:
+            - mariadb
+        env_file:
+            - .env
+        image: vikunja/api
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.vikunja-api.entrypoints: websecure
+            traefik.http.routers.vikunja-api.rule: Host(`vikunja.<domain>`) && PathPrefix(`/api/v1`, `/dav/`, `/.well-known/`)
+            traefik.http.routers.vikunja-api.service: vikunja-api
+            traefik.http.services.vikunja-api.loadbalancer.server.port: 3456
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik:
+                ipv4_address: 172.27.1.76
+        restart: always
+        privileged: true
+        volumes:
+            - files:/app/vikunja/files
+            - config:/app/vikunja/.config
+
+    frontend:
+        container_name: vikunja_frontend
+        environment:
+            VIKUNJA_API_URL: https://vikunja.<domain>/api/v1
+        image: vikunja/frontend
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.vikunja.entrypoints: websecure
+            traefik.http.routers.vikunja.rule: Host(`vikunja.<domain>`)
+            traefik.http.routers.vikunja.service: vikunja
+            traefik.http.services.vikunja.loadbalancer.server.port: 80
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik:
+                ipv4_address: 172.27.1.77
+        restart: unless-stopped
+
+networks:
+    traefik:
+        name: traefik
+        external: true
+
+volumes:
+    db:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
+
+    dbvar:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
+
+    files:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
+
+    config:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
