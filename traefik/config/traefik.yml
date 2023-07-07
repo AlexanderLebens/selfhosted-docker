@@ -1,0 +1,122 @@
+################################################################
+# Global
+################################################################
+
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+################################################################
+# EntryPoints
+################################################################
+
+entryPoints:
+  web:
+    address: :80
+    http:
+      middlewares:
+        - ip-local@file
+
+  websecure:
+    address: :443
+    forwardedHeaders:
+      trustedIPs:
+        - <subnet>
+    proxyProtocol:
+      trustedIPs:
+        - <subnet>
+    http:
+      tls:
+        options: default
+        certResolver: le-cloudflare
+        domains:
+          - main: "*.<domain>"
+            sans:
+              - "<domain>"
+      middlewares:
+        - ip-local@file
+
+################################################################
+# Certificate Resolvers
+################################################################
+
+certificatesResolvers:
+  le-cloudflare:
+    acme:
+      email: <email>
+      storage: /etc/traefik/acme/acme.json
+      # caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+      preferredChain: "ISRG Root X1"
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: "3"
+        resolvers:
+          - "1.1.1.1"
+          - "1.0.0.1"
+
+################################################################
+# Traefik logs
+################################################################
+
+log:
+  level: INFO
+
+################################################################
+# Access logs
+################################################################
+
+accessLog: {}
+
+################################################################
+# API and Dashboard
+################################################################
+
+api:
+  insecure: false
+  dashboard: true
+
+################################################################
+# Ping
+################################################################
+
+# ping:
+
+################################################################
+# Metrics
+################################################################
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    entryPoint: websecure
+    manualRouting: true
+
+################################################################
+# Providers
+################################################################
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+  file:
+    directory: "/etc/traefik/conf"
+    watch: true
+
+################################################################
+# Experimental
+################################################################
+
+experimental:
+  plugins:
+    theme-park:
+      moduleName: "github.com/packruler/traefik-themepark"
+      version: "v1.2.2"
