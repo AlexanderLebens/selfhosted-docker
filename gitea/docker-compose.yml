@@ -1,0 +1,63 @@
+services:
+    postgres:
+        container_name: gitea_postgres
+        env_file:
+            - .env
+        image: postgres:14
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik: null
+        restart: always
+        volumes:
+            - postgressql:/var/lib/postgresql/data
+
+    gitea:
+        container_name: gitea
+        depends_on: 
+            - postgres
+        env_file:
+            - .env
+        image: gitea/gitea:latest
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.gitea.entrypoints: websecure
+            traefik.http.routers.gitea.rule: Host(`gitea.<domain>`)
+            traefik.http.routers.gitea.service: gitea
+            traefik.http.services.gitea.loadbalancer.server.port: 3000
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik: null
+        restart: always
+        volumes:
+            - gitea_data:/data
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+
+networks:
+    traefik:
+        name: traefik
+        external: true
+
+volumes:
+    postgressql:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
+
+    gitea_data:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
