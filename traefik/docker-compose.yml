@@ -1,0 +1,53 @@
+services:
+    traefik:
+        command: traefik
+        container_name: traefik
+        environment:
+            CF_API_EMAIL: <email>
+            CF_API_KEY: <key>
+        image: docker.io/traefik
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.dashboard.entrypoints: websecure
+            traefik.http.routers.dashboard.rule: (Host(`<FQDN>`) && (PathPrefix(`/api/`) || PathPrefix(`/dashboard/`)))
+            traefik.http.routers.dashboard.service: api@internal
+            traefik.http.routers.dashboard.tls: true
+            traefik.http.routers.dashboard.tls.certresolver: le-cloudflare
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik: null
+        ports:
+            - <host ip address>:80:80
+            - <host ip address>:443:443
+            - <host ip address>:9000:9000
+        privileged: true
+        restart: always
+        volumes:
+            - config:/etc/traefik
+            - log:/log
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+
+networks:
+    traefik:
+        name: traefik
+        external: true
+
+volumes:
+    config:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
+
+    log:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
