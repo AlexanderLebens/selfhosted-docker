@@ -1,0 +1,63 @@
+services:
+    portainer:
+        container_name: portainer
+        image: portainer/portainer-ce
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.portainer.entrypoints: websecure
+            traefik.http.routers.portainer.rule: Host(`portainer.<domain>`)
+            traefik.http.routers.portainer.service: portainer
+            traefik.http.services.portainer.loadbalancer.server.port: 9000
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik: null
+            portainer:
+                ipv4_address: 172.18.0.2
+        restart: always
+        privileged: true
+        ports:
+            - 9443:9443
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - data:/data
+
+    portainer_agent:
+        container_name: portainer_agent
+        image: portainer/agent
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            portainer:
+                ipv4_address: 172.18.0.10
+        restart: always
+        privileged: true
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /var/lib/docker/volumes:/var/lib/docker/volumes
+
+networks:
+    traefik:
+        name: traefik
+        external: true
+
+    portainer:
+        name: portainer
+        ipam:
+            config:
+                - subnet: 172.18.0.0/16
+
+volumes:
+    data:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
