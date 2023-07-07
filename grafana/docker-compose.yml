@@ -1,0 +1,36 @@
+services:
+    grafana:
+        container_name: grafana
+        env_file:
+            - .env
+        image: grafana/grafana-oss:latest
+        labels:
+            traefik.docker.network: traefik
+            traefik.enable: true
+            traefik.http.routers.grafana.entrypoints: websecure
+            traefik.http.routers.grafana.rule: Host(`grafana.<domain>`)
+            traefik.http.routers.grafana.service: grafana
+            traefik.http.services.grafana.loadbalancer.server.port: 3000
+        logging:
+            driver: json-file
+            options:
+                max-size: 50m
+                max-file: "3"
+        networks:
+            traefik: null
+        restart: always
+        volumes:
+            - lib:/var/lib/grafana
+
+networks:
+    traefik:
+        name: traefik
+        external: true
+
+volumes:
+    lib:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: <path on disk>
